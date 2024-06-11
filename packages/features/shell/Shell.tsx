@@ -379,6 +379,26 @@ interface UserDropdownProps {
   small?: boolean;
 }
 
+function AvatarWithStatus({ user, size, small }) {
+  return (
+    <span className={classNames(small ? "h-4 w-4" : "h-5 w-5 ltr:mr-2 rtl:ml-2", "relative flex-shrink-0 rounded-full ")}>
+      <Avatar size={size} imageSrc={`${user.avatarUrl || user.avatar}`} alt={user.username || "Nameless User"} className="overflow-hidden" />
+      <span className={classNames("border-muted absolute -bottom-1 -right-1 rounded-full border bg-green-500", small ? "-bottom-0.5 -right-0.5 h-2.5 w-2.5" : "-bottom-0.5 -right-0 h-2 w-2")} />
+    </span>
+  );
+}
+function UserInfo({ user }) {
+  return (
+    <span className="flex flex-grow items-center gap-2">
+      <span className="w-24 flex-shrink-0 text-sm leading-none">
+        <span className="text-emphasis block truncate font-medium">{user.name || "Nameless User"}</span>
+      </span>
+      <Icon name="chevron-down" className="group-hover:text-subtle text-muted h-4 w-4 flex-shrink-0 rtl:mr-4" aria-hidden="true" />
+    </span>
+  );
+}
+
+
 function UserDropdown({ small }: UserDropdownProps) {
   const { isPlatformUser } = useGetUserAttributes();
   const { t } = useLocale();
@@ -927,6 +947,106 @@ function SideBar({ bannersHeight, user, isPlatformUser = false }: SideBarProps) 
     maxHeight: `calc(100vh - ${bannersHeight}px)`,
     top: `${bannersHeight}px`,
   };
+
+  // Componentes y funciones auxiliares extraídas
+
+function PublicPageLink({ user }: { user: any }) {
+  const { t } = useLocale();
+  const orgBranding = useOrgBranding();
+
+  const publicPageUrl = useMemo(() => {
+    if (!user?.org?.id) return `${process.env.NEXT_PUBLIC_WEBSITE_URL}/${user?.username}`;
+    return orgBranding?.slug ? getOrgFullOrigin(orgBranding.slug) : "";
+  }, [orgBranding?.slug, user?.username, user?.org?.id]);
+
+  return (
+    <div className="mt-3 lg:hidden">
+      <Tooltip side="right" content={t("view_public_page")}>
+        <ButtonOrLink
+          id="view_public_page"
+          href={publicPageUrl}
+          aria-label={t("view_public_page")}
+          target="__blank"
+          className="text-left group flex items-center rounded-md px-2 py-1.5 text-sm font-medium transition hover:bg-emphasis hover:text-emphasis"
+        >
+          <Icon name="external-link" className="h-4 w-4 flex-shrink-0 me-3 md:mx-auto lg:ltr:mr-2 lg:rtl:ml-2" aria-hidden="true" />
+          <span className="hidden w-full justify-between lg:flex">
+            <div className="flex">{t("view_public_page")}</div>
+          </span>
+        </ButtonOrLink>
+      </Tooltip>
+      <Tooltip side="right" content={t("copy_public_page_link")}>
+        <ButtonOrLink
+          id="copy_public_page_link"
+          href=""
+          aria-label={t("copy_public_page_link")}
+          onClick={(e: { preventDefault: () => void }) => {
+            e.preventDefault();
+            navigator.clipboard.writeText(publicPageUrl);
+            showToast(t("link_copied"), "success");
+          }}
+          className="text-left group flex items-center rounded-md px-2 py-1.5 text-sm font-medium transition hover:bg-emphasis hover:text-emphasis"
+        >
+          <Icon name="copy" className="h-4 w-4 flex-shrink-0 me-3 md:mx-auto lg:ltr:mr-2 lg:rtl:ml-2" aria-hidden="true" />
+          <span className="hidden w-full justify-between lg:flex">
+            <div className="flex">{t("copy_public_page_link")}</div>
+          </span>
+        </ButtonOrLink>
+      </Tooltip>
+    </div>
+  );
+}
+
+function SettingsLink({ user }: { user: any }) {
+  const { t } = useLocale();
+  return (
+    <Tooltip side="right" content={t("settings")} className="lg:hidden">
+      <ButtonOrLink
+        id="settings"
+        href={user?.org ? `/settings/organizations/profile` : "/settings/my-account/profile"}
+        aria-label={t("settings")}
+        className="text-left group flex items-center rounded-md px-2 py-1.5 text-sm font-medium transition hover:bg-emphasis hover:text-emphasis"
+      >
+        <Icon name="settings" className="h-4 w-4 flex-shrink-0 me-3 md:mx-auto lg:ltr:mr-2 lg:rtl:ml-2" aria-hidden="true" />
+        <span className="hidden w-full justify-between lg:flex">
+          <div className="flex">{t("settings")}</div>
+        </span>
+      </ButtonOrLink>
+    </Tooltip>
+  );
+}
+
+function OrganizationHeader({ orgBranding }: { orgBranding: any }) {
+  return (
+    <header className="todesktop:-mt-3 todesktop:flex-col-reverse todesktop:[-webkit-app-region:drag] items-center justify-between md:hidden lg:flex">
+      {!ENABLE_PROFILE_SWITCHER ? (
+        <Link href="/settings/organizations/profile" className="w-full px-1.5">
+          <div className="flex items-center gap-2 font-medium">
+            <Avatar alt={`${orgBranding.name} logo`} imageSrc={getPlaceholderAvatar(orgBranding.logoUrl, orgBranding.name)} size="xsm" />
+            <p className="text line-clamp-1 text-sm">
+              <span>{orgBranding.name}</span>
+            </p>
+          </div>
+        </Link>
+      ) : (
+        <ProfileDropdown />
+      )}
+      <div className="flex justify-end rtl:space-x-reverse">
+        <button color="minimal" onClick={() => window.history.back()} className="todesktop:block hover:text-emphasis text-subtle group hidden text-sm font-medium">
+          <Icon name="arrow-left" className="group-hover:text-emphasis text-subtle h-4 w-4 flex-shrink-0" />
+        </button>
+        <button color="minimal" onClick={() => window.history.forward()} className="todesktop:block hover:text-emphasis text-subtle group hidden text-sm font-medium">
+          <Icon name="arrow-right" className="group-hover:text-emphasis text-subtle h-4 w-4 flex-shrink-0" />
+        </button>
+        <div data-testid="user-dropdown-trigger" className="flex items-center">
+          <UserDropdown small />
+        </div>
+        <KBarTrigger />
+      </div>
+    </header>
+  );
+}
+
 
   const bottomNavItems: NavigationItemType[] = [
     {
